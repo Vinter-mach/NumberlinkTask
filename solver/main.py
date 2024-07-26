@@ -8,22 +8,34 @@ def check_in_field(x, y, line_count, column_count):
     return -1 < x < line_count and -1 < y < column_count
 
 
-def have_way(all_matrix, matrix, line_count, column_count, cur_vertex, visited, start_vertex, finish_vertex):
-    if not check_in_field(cur_vertex[0], cur_vertex[1], line_count, column_count):
-        return False
-    if visited[cur_vertex[0]][cur_vertex[1]]:
-        return False
-    if cur_vertex == finish_vertex:
+def have_way(all_matrix, matrix, line_count, column_count, visited, start_vertex, finish_vertex):
+    if start_vertex == finish_vertex:
         return True
-    if cur_vertex != start_vertex and matrix[cur_vertex[0]][cur_vertex[1]] != 0:
-        return False
-    visited[cur_vertex[0]][cur_vertex[1]] = True
-    all_matrix[cur_vertex[0]][cur_vertex[1]] = 1
+
+    list_next_vertex = [start_vertex]
     result = False
-    for i in range(len(delta)):
-        next_vertex = (cur_vertex[0] + delta[i][0], cur_vertex[1] + delta[i][1])
-        result |= have_way(all_matrix, matrix, line_count, column_count, next_vertex, visited, start_vertex,
-                           finish_vertex)
+
+    while list_next_vertex:
+        current_vertex = list_next_vertex.pop()
+
+        if current_vertex == finish_vertex:
+            result = True
+
+        visited[current_vertex[0]][current_vertex[1]] = True
+        all_matrix[current_vertex[0]][current_vertex[1]] = 1
+
+        for i in range(len(delta)):
+            next_vertex = (current_vertex[0] + delta[i][0], current_vertex[1] + delta[i][1])
+
+            if next_vertex == finish_vertex:
+                result = True
+
+            if (not check_in_field(next_vertex[0], next_vertex[1], line_count, column_count) or
+                    visited[next_vertex[0]][next_vertex[1]] or
+                    (next_vertex != start_vertex and matrix[next_vertex[0]][next_vertex[1]] != 0)):
+                continue
+
+            list_next_vertex.append(next_vertex)
     return result
 
 
@@ -37,7 +49,7 @@ def check_is_not_break(matrix, line_count, column_count, start_and_finish):
                 visited = [[False] * column_count for _ in range(line_count)]
                 start_vertex = start_and_finish[matrix[i][j]][0]
                 finish_vertex = start_and_finish[matrix[i][j]][1]
-                if not have_way(all_matrix, matrix, line_count, column_count, start_vertex, visited,
+                if not have_way(all_matrix, matrix, line_count, column_count, visited,
                                 start_vertex, finish_vertex):
                     return False
 
@@ -122,8 +134,8 @@ for i in range(len(matrix)):
         paths_for_number[matrix[i][j]] = all_path
 finish = time.monotonic()
 print(finish - start)
-
-for key in paths_for_number:
-    print(key)
-    for path in paths_for_number[key]:
-        print(*path)
+#
+# for key in paths_for_number:
+#     print(key)
+#     for path in paths_for_number[key]:
+#         print(*path)
