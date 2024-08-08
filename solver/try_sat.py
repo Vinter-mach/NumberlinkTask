@@ -1,11 +1,18 @@
 from ortools.sat.python import cp_model
 
+matrix = []
+for i in range(9):
+    matrix.append(list(map(int, input().split())))
+
 model = cp_model.CpModel()
 
 position = dict()
 
 for i in range(9):
     for j in range(9):
+        if matrix[i][j] != 0:
+            position[f'({i}, {j})'] = model.new_int_var(matrix[i][j], matrix[i][j], f'({i}, {j})')
+            continue
         position[f'({i}, {j})'] = model.new_int_var(1, 9, f'({i}, {j})')
 
 # check square constraints
@@ -32,19 +39,19 @@ for i in range(9):
             model.add(position[position_in_horizontal[k]] != position[position_in_horizontal[m]])
 
 # check diagonal constraints
-for i in range(18):
-    diag_x = i
-    diag_y = 0
-    if i >= 9:
-        diag_x, diag_y = diag_y, diag_x
-    position_in_diagonal = []
-    while -1 < diag_x < 9 and -1 < diag_y < 9:
-        position_in_diagonal.append(f'({diag_x}, {diag_y})')
-        diag_x += 1
-        diag_y += 1
-    for k in range(len(position_in_diagonal)):
-        for m in range(k + 1, len(position_in_diagonal)):
-            model.add(position[position_in_diagonal[k]] != position[position_in_diagonal[m]])
+# for i in range(18):
+#     diag_x = i
+#     diag_y = 0
+#     if i >= 9:
+#         diag_x, diag_y = diag_y, diag_x
+#     position_in_diagonal = []
+#     while -1 < diag_x < 9 and -1 < diag_y < 9:
+#         position_in_diagonal.append(f'({diag_x}, {diag_y})')
+#         diag_x += 1
+#         diag_y += 1
+#     for k in range(len(position_in_diagonal)):
+#         for m in range(k + 1, len(position_in_diagonal)):
+#             model.add(position[position_in_diagonal[k]] != position[position_in_diagonal[m]])
 
 solver = cp_model.CpSolver()
 status = solver.solve(model)
@@ -52,4 +59,8 @@ print(status)
 for i in range(9):
     print()
     for j in range(9):
-        print(solver.value(position[f'({i}, {j})']), end=" ")
+        if matrix[i][j] == 0:
+            print("\033[31m" + f'{solver.value(position[f'({i}, {j})'])}' + "\033[0m", end=" ")
+            continue
+        print(f'{solver.value(position[f'({i}, {j})'])}', end=" ")
+
