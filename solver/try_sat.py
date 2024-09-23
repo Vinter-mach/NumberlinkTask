@@ -6,7 +6,7 @@ for i in range(9):
 
 model = cp_model.CpModel()
 
-position = dict()
+position = {}
 
 for i in range(9):
     for j in range(9):
@@ -63,4 +63,3 @@ for i in range(9):
             print("\033[31m" + f'{solver.value(position[f'({i}, {j})'])}' + "\033[0m", end=" ")
             continue
         print(f'{solver.value(position[f'({i}, {j})'])}', end=" ")
-
