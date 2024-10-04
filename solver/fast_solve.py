@@ -78,10 +78,10 @@ class FastSolver:
                     self.is_condition_carried_out(current_element, over_element, self.requirement[idx].over, idx)
             return
 
-        left_request = False if j == 0 else self.model.NewBoolVar("left request")
-        right_request = False if j == self.column_count - 1 else self.model.NewBoolVar("right request")
-        under_request = False if i == self.line_count - 1 else self.model.NewBoolVar("under request")
-        over_request = False if i == 0 else self.model.NewBoolVar("over request")
+        left_request = False if j == 0 else self.model.NewBoolVar(f"{i, j} left request")
+        right_request = False if j == self.column_count - 1 else self.model.NewBoolVar(f"{i, j} right request")
+        under_request = False if i == self.line_count - 1 else self.model.NewBoolVar(f"{i, j} under request")
+        over_request = False if i == 0 else self.model.NewBoolVar(f"{i, j} over request")
 
         if j != 0:
             self.model.AddBoolAnd(
@@ -101,7 +101,7 @@ class FastSolver:
 
         self.model.Add((left_request + right_request + under_request + over_request) == 1)
 
-    def generate_condition_for_point(self, i, j, is_start_or_finish):
+    def generate_condition_for_point(self, i, j):
         if self.is_not_edge(i, j):
             self.condition[(i, j)] = self.model.NewIntVar(1, 6, f"_({i},{j})")
             return
@@ -137,7 +137,7 @@ class FastSolver:
         for i in range(self.line_count):
             for j in range(self.column_count):
 
-                self.generate_condition_for_point(i, j, self.matrix[i][j] != 0)
+                self.generate_condition_for_point(i, j)
 
                 if self.matrix[i][j] != 0:
                     if self.matrix[i][j] not in self.start_finish_values:
@@ -203,12 +203,12 @@ class PointCondition:
 
     def init_variable_state(self):
         # set point value
-        self.value = {i: self.solverSat.model.NewBoolVar(f"value is {i}") for i in
+        self.value = {i: self.solverSat.model.NewBoolVar(f"{self.i, self.j} value is {i}") for i in
                       range(1, self.solverSat.max_value + 1)}
 
         # set point condition
         self.condition = {i: self.solverSat.model.NewBoolVar(
-            f"condition is {i}") for i in range(1, self.solverSat.condition_count + 1)}
+            f"{self.i, self.j} condition is {i}") for i in range(1, self.solverSat.condition_count + 1)}
 
         self.check_correctness(dict_bool_var=self.value, needed_variables=self.solverSat.variables)
         self.check_correctness(dict_bool_var=self.condition, needed_variables=self.solverSat.condition)
