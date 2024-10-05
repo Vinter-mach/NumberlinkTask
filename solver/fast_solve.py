@@ -28,7 +28,7 @@ class FastSolver:
         self.update_requirement()
 
         # point condition bool
-        self.point_condition = None
+        self.point_condition = []
 
     def update_requirement(self):
 
@@ -60,26 +60,28 @@ class FastSolver:
             self.model.Add(self.variables[(current_element.i, current_element.j)] == self.variables[
                 (side_element.i, side_element.j)]).OnlyEnforceIf(current_element.condition[el])
 
+    def is_suitable_condition(self, current_condition, requirement_condition, current_element, side_element):
+        for idx in current_condition:
+            self.model.AddBoolOr(side_element.condition[el] for el in requirement_condition + [7]).OnlyEnforceIf(
+                current_element.condition[idx])
+
     def is_condition_carried_out(self, current_element, left_element, right_element, under_element, over_element,
                                  number_of_condition):
-        # check is needed element exist, next i need to check only necessary
-        self.check_exist_element(current_element, number_of_condition, self.requirement[number_of_condition].left,
-                                 left_element)
-        self.check_exist_element(current_element, number_of_condition, self.requirement[number_of_condition].right,
-                                 right_element)
-        self.check_exist_element(current_element, number_of_condition, self.requirement[number_of_condition].under,
-                                 under_element)
-        self.check_exist_element(current_element, number_of_condition, self.requirement[number_of_condition].over,
-                                 over_element)
+        element_conditions = {
+            'left': (self.left, self.right, left_element, self.requirement[number_of_condition].left),
+            'right': (self.right, self.left, right_element, self.requirement[number_of_condition].right),
+            'under': (self.under, self.over, under_element, self.requirement[number_of_condition].under),
+            'over': (self.over, self.under, over_element, self.requirement[number_of_condition].over),
+        }
 
-        if left_element is not None:
-            self.is_same_value_if_cond(self.right, current_element, left_element)
-        if right_element is not None:
-            self.is_same_value_if_cond(self.left, current_element, right_element)
-        if under_element is not None:
-            self.is_same_value_if_cond(self.over, current_element, under_element)
-        if over_element is not None:
-            self.is_same_value_if_cond(self.under, current_element, over_element)
+        for direction, (
+                current_condition, requirement_value, element, requirement_exist_around) in element_conditions.items():
+
+            self.check_exist_element(current_element, number_of_condition, requirement_exist_around, element)
+
+            if element is not None:
+                self.is_same_value_if_cond(requirement_value, current_element, element)
+                self.is_suitable_condition(requirement_value, current_condition, current_element, element)
 
     def model_prepare_var_make(self, i, j):
         if self.matrix[i][j] == 0:
@@ -95,10 +97,16 @@ class FastSolver:
             return
 
     def generate_condition_for_point(self, i, j):
+        if i == 0 and j == 1:
+            self.condition[(i, j)] = self.model.NewIntVar(1, 1, f"_({i},{j})")
+            return
+
         if self.matrix[i][j] != 0:
             self.condition[(i, j)] = self.model.NewIntVar(7, 7, f"_({i},{j})")
             return
 
+        self.condition[(i, j)] = self.model.NewIntVar(1, 6, f"_({i},{j})")
+        return None
         if self.is_not_edge(i, j):
             self.condition[(i, j)] = self.model.NewIntVar(1, 6, f"_({i},{j})")
             return
@@ -133,6 +141,7 @@ class FastSolver:
 
     def model_prepare(self):
         for i in range(self.line_count):
+            row = []
             for j in range(self.column_count):
 
                 self.generate_condition_for_point(i, j)
@@ -142,8 +151,8 @@ class FastSolver:
                 else:
                     self.variables[(i, j)] = self.model.NewIntVar(1, self.max_value, f"({i},{j})")
 
-        self.point_condition = [
-            [PointCondition(j, i, self) for i in range(self.line_count)] for j in range(self.column_count)]
+                row.append(PointCondition(i, j, self))
+            self.point_condition.append(row)
 
         for i in range(self.line_count):
             for j in range(self.column_count):
