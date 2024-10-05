@@ -50,56 +50,51 @@ class FastSolver:
     def is_not_edge(self, i, j):
         return 0 < i < self.line_count - 1 and 0 < j < self.column_count - 1
 
-    def is_condition_carried_out(self, current_element, side_element, requirement, idx):
-        self.model.AddBoolOr([side_element.condition[el] for el in requirement]).OnlyEnforceIf(
-            current_element.condition[idx])
-        self.model.Add(self.variables[(side_element.i, side_element.j)] == self.variables[
-            (current_element.i, current_element.j)]).OnlyEnforceIf(
-            len(requirement) != 0 and current_element.condition[idx])
+    def is_condition_carried_out(self, current_element, left_element, right_element, under_element, over_element,
+                                 number_of_condition):
+        value = len(self.requirement[number_of_condition].left) != 0
+
+        #self.model.Add(left_element is not None).OnlyEnforceIf(
+        #    current_element.condition[number_of_condition] and value)
+        self.model.AddBoolOr(
+            [current_element.condition[number_of_condition].Not(), len(self.requirement[number_of_condition].left) == 0,
+             left_element is not None])
 
     def model_prepare_var_make(self, i, j):
         if self.matrix[i][j] == 0:
             for idx in range(1, self.condition_count):
                 current_element = self.point_condition[i][j]
-                if j > 0:
-                    left_element = self.point_condition[i][j - 1]
-                    self.is_condition_carried_out(current_element, left_element, self.requirement[idx].left, idx)
+                left_element = None if j == 0 else self.point_condition[i][j - 1]
+                right_element = None if j == self.column_count - 1 else self.point_condition[i][j + 1]
+                under_element = None if i == self.line_count - 1 else self.point_condition[i + 1][j]
+                over_element = None if i == 0 else self.point_condition[i - 1][j]
 
-                if j < self.column_count - 1:
-                    right_element = self.point_condition[i][j + 1]
-                    self.is_condition_carried_out(current_element, right_element, self.requirement[idx].right, idx)
-
-                if i < self.line_count - 1:
-                    under_element = self.point_condition[i + 1][j]
-                    self.is_condition_carried_out(current_element, under_element, self.requirement[idx].under, idx)
-
-                if i > 0:
-                    over_element = self.point_condition[i - 1][j]
-                    self.is_condition_carried_out(current_element, over_element, self.requirement[idx].over, idx)
+                self.is_condition_carried_out(current_element, left_element, right_element, under_element, over_element,
+                                              idx)
             return
 
-        left_request = False if j == 0 else self.model.NewBoolVar(f"{i, j} left request")
-        right_request = False if j == self.column_count - 1 else self.model.NewBoolVar(f"{i, j} right request")
-        under_request = False if i == self.line_count - 1 else self.model.NewBoolVar(f"{i, j} under request")
-        over_request = False if i == 0 else self.model.NewBoolVar(f"{i, j} over request")
-
-        if j != 0:
-            self.model.AddBoolAnd(
-                [self.point_condition[i][j - 1].condition[el].Not() for el in self.left] + [left_request])
-
-        if j != self.line_count - 1:
-            self.model.AddBoolAnd(
-                [self.point_condition[i][j + 1].condition[el].Not() for el in self.right] + [right_request])
-
-        if i != 0:
-            self.model.AddBoolAnd(
-                [self.point_condition[i - 1][j].condition[el].Not() for el in self.over] + [over_request])
-
-        if i != self.column_count - 1:
-            self.model.AddBoolAnd(
-                [self.point_condition[i + 1][j].condition[el].Not() for el in self.under] + [under_request])
-
-        self.model.Add((left_request + right_request + under_request + over_request) == 1)
+        # left_request = False if j == 0 else self.model.NewBoolVar(f"{i, j} left request")
+        # right_request = False if j == self.column_count - 1 else self.model.NewBoolVar(f"{i, j} right request")
+        # under_request = False if i == self.line_count - 1 else self.model.NewBoolVar(f"{i, j} under request")
+        # over_request = False if i == 0 else self.model.NewBoolVar(f"{i, j} over request")
+        #
+        # if j != 0:
+        #     self.model.AddBoolAnd(
+        #         [self.point_condition[i][j - 1].condition[el].Not() for el in self.left] + [left_request])
+        #
+        # if j != self.line_count - 1:
+        #     self.model.AddBoolAnd(
+        #         [self.point_condition[i][j + 1].condition[el].Not() for el in self.right] + [right_request])
+        #
+        # if i != 0:
+        #     self.model.AddBoolAnd(
+        #         [self.point_condition[i - 1][j].condition[el].Not() for el in self.over] + [over_request])
+        #
+        # if i != self.column_count - 1:
+        #     self.model.AddBoolAnd(
+        #         [self.point_condition[i + 1][j].condition[el].Not() for el in self.under] + [under_request])
+        #
+        # self.model.Add((left_request + right_request + under_request + over_request) == 1)
 
     def generate_condition_for_point(self, i, j):
         if self.is_not_edge(i, j):
