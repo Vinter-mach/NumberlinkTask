@@ -76,24 +76,28 @@ class FastSolver:
                                               "over": over_request}
 
         if left_element is not None:
-            for el in self.left:
-                self.model.AddBoolOr([left_element.condition[el].Not(), left_request]).OnlyEnforceIf(
-                    current_element.condition[7])
+            self.model.AddBoolOr(
+                left_request.Not() if i == len(self.left) else left_element.condition[self.left[i]] for i in
+                range(len(self.left) + 1)).OnlyEnforceIf(
+                current_element.condition[7])
 
         if right_element is not None:
-            for el in self.right:
-                self.model.AddBoolOr([right_element.condition[el].Not(), right_request]).OnlyEnforceIf(
-                    current_element.condition[7])
+            self.model.AddBoolOr(
+                right_request.Not() if i == len(self.right) else right_element.condition[self.right[i]] for i in
+                range(len(self.right) + 1)).OnlyEnforceIf(
+                current_element.condition[7])
 
         if under_element is not None:
-            for el in self.under:
-                self.model.AddBoolOr([under_element.condition[el].Not(), under_request]).OnlyEnforceIf(
-                    current_element.condition[7])
+            self.model.AddBoolOr(
+                under_request.Not() if i == len(self.under) else under_element.condition[self.under[i]] for i in
+                range(len(self.under) + 1)).OnlyEnforceIf(
+                current_element.condition[7])
 
         if over_element is not None:
-            for el in self.over:
-                self.model.AddBoolOr([over_element.condition[el].Not(), over_request]).OnlyEnforceIf(
-                    current_element.condition[7])
+            self.model.AddBoolOr(
+                over_request.Not() if i == len(self.over) else over_element.condition[self.over[i]] for i in
+                range(len(self.over) + 1)).OnlyEnforceIf(
+                current_element.condition[7])
 
         self.model.Add((left_request + right_request + under_request + over_request) == 1).OnlyEnforceIf(
             current_element.condition[7])
@@ -176,7 +180,8 @@ class FastSolver:
                            range(1, self.condition_count + 1)],
                           [solver.value(self.point_condition[i][j].value[el]) for el in range(1, self.max_value + 1)],
                           0 if self.matrix[i][j] == 0 else [
-                              (key, solver.value(self.origin_values[(i, j)][key])) for key in self.origin_values[(i, j)]])
+                              (key, solver.value(self.origin_values[(i, j)][key])) for key in
+                              self.origin_values[(i, j)]])
                 result.append(deepcopy(row))
             return result
 
