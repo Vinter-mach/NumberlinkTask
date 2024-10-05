@@ -14,7 +14,7 @@ class FastSolver:
         self.model = cp_model.CpModel()
         self.variables = {}
         self.condition = {}
-        self.start_finish_values = {}
+        self.origin_values = {}
 
         self.delta = [(1, 0), (-1, 0), (0, 1), (0, -1)]
 
@@ -65,6 +65,39 @@ class FastSolver:
             self.model.AddBoolOr(side_element.condition[el] for el in requirement_condition + [7]).OnlyEnforceIf(
                 current_element.condition[idx])
 
+    def check_for_origin_point(self, current_element, left_element, right_element, under_element, over_element):
+        cur_i, cur_j = current_element.i, current_element.j
+        left_request = self.model.NewBoolVar(f"{cur_i},{cur_j} left request")
+        right_request = self.model.NewBoolVar(f"{cur_i},{cur_j} right request")
+        under_request = self.model.NewBoolVar(f"{cur_i},{cur_j} under request")
+        over_request = self.model.NewBoolVar(f"{cur_i},{cur_j} over request")
+
+        self.origin_values[(cur_i, cur_j)] = {"left": left_request, "right": right_request, "under": under_request,
+                                              "over": over_request}
+
+        if left_element is not None:
+            for el in self.left:
+                self.model.AddBoolOr([left_element.condition[el].Not(), left_request]).OnlyEnforceIf(
+                    current_element.condition[7])
+
+        if right_element is not None:
+            for el in self.right:
+                self.model.AddBoolOr([right_element.condition[el].Not(), right_request]).OnlyEnforceIf(
+                    current_element.condition[7])
+
+        if under_element is not None:
+            for el in self.under:
+                self.model.AddBoolOr([under_element.condition[el].Not(), under_request]).OnlyEnforceIf(
+                    current_element.condition[7])
+
+        if over_element is not None:
+            for el in self.over:
+                self.model.AddBoolOr([over_element.condition[el].Not(), over_request]).OnlyEnforceIf(
+                    current_element.condition[7])
+
+        self.model.Add((left_request + right_request + under_request + over_request) == 1).OnlyEnforceIf(
+            current_element.condition[7])
+
     def is_condition_carried_out(self, current_element, left_element, right_element, under_element, over_element,
                                  number_of_condition):
         element_conditions = {
@@ -83,61 +116,26 @@ class FastSolver:
                 self.is_same_value_if_cond(requirement_value, current_element, element)
                 self.is_suitable_condition(requirement_value, current_condition, current_element, element)
 
-    def model_prepare_var_make(self, i, j):
-        if self.matrix[i][j] == 0:
-            for idx in range(1, self.condition_count):
-                current_element = self.point_condition[i][j]
-                left_element = None if j == 0 else self.point_condition[i][j - 1]
-                right_element = None if j == self.column_count - 1 else self.point_condition[i][j + 1]
-                under_element = None if i == self.line_count - 1 else self.point_condition[i + 1][j]
-                over_element = None if i == 0 else self.point_condition[i - 1][j]
+        self.check_for_origin_point(current_element, left_element, right_element, under_element, over_element)
 
-                self.is_condition_carried_out(current_element, left_element, right_element, under_element, over_element,
-                                              idx)
-            return
+    def model_prepare_var_make(self, i, j):
+        current_element = self.point_condition[i][j]
+        left_element = None if j == 0 else self.point_condition[i][j - 1]
+        right_element = None if j == self.column_count - 1 else self.point_condition[i][j + 1]
+        under_element = None if i == self.line_count - 1 else self.point_condition[i + 1][j]
+        over_element = None if i == 0 else self.point_condition[i - 1][j]
+
+        for idx in range(1, self.condition_count):
+            self.is_condition_carried_out(current_element, left_element, right_element, under_element, over_element,
+                                          idx)
+        self.check_for_origin_point(current_element, left_element, right_element, under_element, over_element)
 
     def generate_condition_for_point(self, i, j):
-        if i == 0 and j == 1:
-            self.condition[(i, j)] = self.model.NewIntVar(1, 1, f"_({i},{j})")
-            return
-
         if self.matrix[i][j] != 0:
             self.condition[(i, j)] = self.model.NewIntVar(7, 7, f"_({i},{j})")
             return
 
         self.condition[(i, j)] = self.model.NewIntVar(1, 6, f"_({i},{j})")
-        return None
-        if self.is_not_edge(i, j):
-            self.condition[(i, j)] = self.model.NewIntVar(1, 6, f"_({i},{j})")
-            return
-
-        if 0 < i < self.line_count - 1:
-            if j == 0:
-                self.condition[(i, j)] = self.model.NewIntVarFromDomain(
-                    cp_model.Domain.FromValues([2, 4, 5]), f"_({i},{j})")
-            else:
-                self.condition[(i, j)] = self.model.NewIntVarFromDomain(
-                    cp_model.Domain.FromValues([2, 3, 6]), f"_({i},{j})")
-
-        else:
-            if i == 0:
-                if 0 < j < self.column_count - 1:
-                    self.condition[(i, j)] = self.model.NewIntVarFromDomain(
-                        cp_model.Domain.FromValues([1, 3, 4]), f"_({i},{j})")
-                else:
-                    if j == 0:
-                        self.condition[(i, j)] = self.model.NewIntVar(4, 4, f"_({i},{j})")
-                    else:
-                        self.condition[(i, j)] = self.model.NewIntVar(2, 2, f"_({i},{j})")
-            else:
-                if 0 < j < self.column_count - 1:
-                    self.condition[(i, j)] = self.model.NewIntVarFromDomain(
-                        cp_model.Domain.FromValues([1, 5, 6]), f"_({i},{j})")
-                else:
-                    if j == 0:
-                        self.condition[(i, j)] = self.model.NewIntVar(5, 5, f"_({i},{j})")
-                    else:
-                        self.condition[(i, j)] = self.model.NewIntVar(6, 6, f"_({i},{j})")
 
     def model_prepare(self):
         for i in range(self.line_count):
@@ -170,12 +168,15 @@ class FastSolver:
             for i in range(self.line_count):
                 row = []
                 for j in range(self.column_count):
+                    # row.append(solver.value(self.variables[(i, j)]))
                     row.append([solver.value(self.variables[(i, j)]), solver.value(self.condition[(i, j)])])
                     print(i,
                           j,
                           [solver.value(self.point_condition[i][j].condition[el]) for el in
                            range(1, self.condition_count + 1)],
-                          [solver.value(self.point_condition[i][j].value[el]) for el in range(1, self.max_value + 1)])
+                          [solver.value(self.point_condition[i][j].value[el]) for el in range(1, self.max_value + 1)],
+                          0 if self.matrix[i][j] == 0 else [
+                              (key, solver.value(self.origin_values[(i, j)][key])) for key in self.origin_values[(i, j)]])
                 result.append(deepcopy(row))
             return result
 

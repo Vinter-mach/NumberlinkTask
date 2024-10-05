@@ -18,10 +18,10 @@ for i in range(n):
 
 sample_matrix = deepcopy(matrix)
 
-solv = solver.Solver(matrix, n, m)
+#solv = solver.Solver(matrix, n, m)
 second_solve = fast_solver.FastSolver(sample_matrix, n, m, max_value)
 
-solv.get_answer()
+#solv.get_answer()
 
 res = second_solve.try_solve()
 
