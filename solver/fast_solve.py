@@ -28,7 +28,7 @@ class FastSolver:
         self.update_requirement()
 
         # point condition bool
-        self.point_condition = []
+        self.point_condition = None
 
     def update_requirement(self):
 
@@ -65,16 +65,17 @@ class FastSolver:
             self.model.AddBoolOr(side_element.condition[el] for el in requirement_condition + [7]).OnlyEnforceIf(
                 current_element.condition[idx])
 
-    def apply_constraints(self, element, element_request, element_list, current_element_condition):
-        if element is not None:
-            self.model.AddBoolOr(
-                element_request.Not() if i == len(element_list) else element.condition[element_list[i]]
-                for i in range(len(element_list) + 1)
-            ).OnlyEnforceIf(current_element_condition)
+    def check_equivalence(self, element, element_request, element_list, current_element_condition):
+        if element is None:
+            return
 
-            for el in element_list:
-                self.model.AddBoolOr([element.condition[el].Not(), element_request]).OnlyEnforceIf(
-                    current_element_condition)
+        self.model.AddBoolOr(
+            element_request.Not() if i == len(element_list) else element.condition[element_list[i]]
+            for i in range(len(element_list) + 1)).OnlyEnforceIf(current_element_condition)
+
+        for el in element_list:
+            self.model.AddBoolOr([element.condition[el].Not(), element_request]).OnlyEnforceIf(
+                current_element_condition)
 
     def check_for_origin_point(self, current_element, left_element, right_element, under_element, over_element):
         cur_i, cur_j = current_element.i, current_element.j
@@ -85,52 +86,17 @@ class FastSolver:
 
         self.origin_values[(cur_i, cur_j)] = {"left": left_request, "right": right_request, "under": under_request,
                                               "over": over_request}
-        self.apply_constraints(left_element, left_request, self.left, current_element.condition[7])
-        self.apply_constraints(right_element, right_request, self.right, current_element.condition[7])
-        self.apply_constraints(under_element, under_request, self.under, current_element.condition[7])
-        self.apply_constraints(over_element, over_request, self.over, current_element.condition[7])
 
-        # if left_element is not None:
-        #     self.model.AddBoolOr(
-        #         left_request.Not() if i == len(self.left) else left_element.condition[self.left[i]] for i in
-        #         range(len(self.left) + 1)).OnlyEnforceIf(
-        #         current_element.condition[7])
-        #     for el in self.left:
-        #         self.model.AddBoolOr([left_element.condition[el].Not(), left_request]).OnlyEnforceIf(
-        #             current_element.condition[7])
-        #
-        # if right_element is not None:
-        #     self.model.AddBoolOr(
-        #         right_request.Not() if i == len(self.right) else right_element.condition[self.right[i]] for i in
-        #         range(len(self.right) + 1)).OnlyEnforceIf(
-        #         current_element.condition[7])
-        #     for el in self.right:
-        #         self.model.AddBoolOr([right_element.condition[el].Not(), right_request]).OnlyEnforceIf(
-        #             current_element.condition[7])
-        #
-        # if under_element is not None:
-        #     self.model.AddBoolOr(
-        #         under_request.Not() if i == len(self.under) else under_element.condition[self.under[i]] for i in
-        #         range(len(self.under) + 1)).OnlyEnforceIf(
-        #         current_element.condition[7])
-        #     for el in self.under:
-        #         self.model.AddBoolOr([under_element.condition[el].Not(), under_request]).OnlyEnforceIf(
-        #             current_element.condition[7])
-        #
-        # if over_element is not None:
-        #     self.model.AddBoolOr(
-        #         over_request.Not() if i == len(self.over) else over_element.condition[self.over[i]] for i in
-        #         range(len(self.over) + 1)).OnlyEnforceIf(
-        #         current_element.condition[7])
-        #     for el in self.over:
-        #         self.model.AddBoolOr([over_element.condition[el].Not(), over_request]).OnlyEnforceIf(
-        #             current_element.condition[7])
+        self.check_equivalence(left_element, left_request, self.left, current_element.condition[7])
+        self.check_equivalence(right_element, right_request, self.right, current_element.condition[7])
+        self.check_equivalence(under_element, under_request, self.under, current_element.condition[7])
+        self.check_equivalence(over_element, over_request, self.over, current_element.condition[7])
 
         self.model.Add((left_request + right_request + under_request + over_request) == 1).OnlyEnforceIf(
             current_element.condition[7])
 
-    def is_condition_carried_out(self, current_element, left_element, right_element, under_element, over_element,
-                                 number_of_condition):
+    def check_for_point(self, current_element, left_element, right_element, under_element, over_element,
+                        number_of_condition):
         element_conditions = {
             'left': (self.left, self.right, left_element, self.requirement[number_of_condition].left),
             'right': (self.right, self.left, right_element, self.requirement[number_of_condition].right),
@@ -157,8 +123,8 @@ class FastSolver:
         over_element = None if i == 0 else self.point_condition[i - 1][j]
 
         for idx in range(1, self.condition_count):
-            self.is_condition_carried_out(current_element, left_element, right_element, under_element, over_element,
-                                          idx)
+            self.check_for_point(current_element, left_element, right_element, under_element, over_element,
+                                 idx)
         self.check_for_origin_point(current_element, left_element, right_element, under_element, over_element)
 
     def generate_condition_for_point(self, i, j):
@@ -170,7 +136,6 @@ class FastSolver:
 
     def model_prepare(self):
         for i in range(self.line_count):
-            row = []
             for j in range(self.column_count):
 
                 self.generate_condition_for_point(i, j)
@@ -180,8 +145,8 @@ class FastSolver:
                 else:
                     self.variables[(i, j)] = self.model.NewIntVar(1, self.max_value, f"({i},{j})")
 
-                row.append(PointCondition(i, j, self))
-            self.point_condition.append(row)
+        self.point_condition = [[PointCondition(i, j, self) for j in range(self.line_count)] for i in
+                                range(self.column_count)]
 
         for i in range(self.line_count):
             for j in range(self.column_count):
@@ -200,15 +165,6 @@ class FastSolver:
                 row = []
                 for j in range(self.column_count):
                     row.append(solver.value(self.variables[(i, j)]))
-                    # row.append([solver.value(self.variables[(i, j)]), solver.value(self.condition[(i, j)])])
-                    # print(i,
-                    #       j,
-                    #       [solver.value(self.point_condition[i][j].condition[el]) for el in
-                    #        range(1, self.condition_count + 1)],
-                    #       [solver.value(self.point_condition[i][j].value[el]) for el in range(1, self.max_value + 1)],
-                    #       0 if self.matrix[i][j] == 0 else [
-                    #           (key, solver.value(self.origin_values[(i, j)][key])) for key in
-                    #           self.origin_values[(i, j)]])
                 result.append(deepcopy(row))
             return result
 
