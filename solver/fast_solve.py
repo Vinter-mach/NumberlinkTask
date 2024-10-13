@@ -29,7 +29,7 @@ class FastSolver:
         self.update_requirement()
 
         # point condition bool
-        self.point_condition = None
+        self.point_condition = {}
 
     def update_requirement(self):
 
@@ -185,17 +185,17 @@ class FastSolver:
 
             self.model.Add(
                 self.numbers[self.origin_points[key][1]] ==
-                sum(self.point_condition[i][j].value[key]
+                sum(self.point_condition[(i, j)].value[key]
                     for (i, j) in self.variables.keys()))
 
     def make_restrictions(self):
         for i in range(self.line_count):
             for j in range(self.column_count):
-                current_element = self.point_condition[i][j]
-                left_element = None if j == 0 else self.point_condition[i][j - 1]
-                right_element = None if j == self.column_count - 1 else self.point_condition[i][j + 1]
-                under_element = None if i == self.line_count - 1 else self.point_condition[i + 1][j]
-                over_element = None if i == 0 else self.point_condition[i - 1][j]
+                current_element = self.point_condition[(i, j)]
+                left_element = None if j == 0 else self.point_condition[(i, j - 1)]
+                right_element = None if j == self.column_count - 1 else self.point_condition[(i, j + 1)]
+                under_element = None if i == self.line_count - 1 else self.point_condition[(i + 1, j)]
+                over_element = None if i == 0 else self.point_condition[(i - 1, j)]
 
                 for idx in range(1, self.condition_count):
                     self.check_for_point(current_element, left_element, right_element, under_element, over_element,
@@ -225,8 +225,9 @@ class FastSolver:
                 else:
                     self.variables[(i, j)] = self.model.NewIntVar(1, self.max_value, f"({i},{j})")
 
-        self.point_condition = [[PointCondition(i, j, self) for j in range(self.line_count)] for i in
-                                range(self.column_count)]
+        for i in range(self.line_count):
+            for j in range(self.column_count):
+                self.point_condition[(i, j)] = PointCondition(i, j, self)
 
         self.make_restrictions()
 
@@ -247,9 +248,9 @@ class FastSolver:
                                 solver.value(self.numbers[(i, j)])])
                     print(i,
                           j,
-                          [solver.value(self.point_condition[i][j].condition[el]) for el in
+                          [solver.value(self.point_condition[(i, j)].condition[el]) for el in
                            range(1, self.condition_count + 1)],
-                          [solver.value(self.point_condition[i][j].value[el]) for el in range(1, self.max_value + 1)],
+                          [solver.value(self.point_condition[(i, j)].value[el]) for el in range(1, self.max_value + 1)],
                           0 if self.matrix[i][j] == 0 else [
                               (key, solver.value(self.origin_values[(i, j)][key])) for key in
                               self.origin_values[(i, j)]],
