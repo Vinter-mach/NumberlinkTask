@@ -1,5 +1,6 @@
 from ortools.sat.python import cp_model
 from copy import deepcopy
+from cellinfo import CellInfo
 
 
 class FastSolver:
@@ -244,8 +245,11 @@ class FastSolver:
                 row = []
                 for j in range(self.column_count):
                     # row.append(solver.value(self.variables[(i, j)]))
-                    row.append([solver.value(self.variables[(i, j)]), solver.value(self.condition[(i, j)]),
-                                solver.value(self.numbers[(i, j)])])
+                    # row.append([solver.value(self.variables[(i, j)]), solver.value(self.condition[(i, j)]),
+                    #             solver.value(self.numbers[(i, j)])])
+
+                    row.append(CellInfo(solver.Value(self.condition[(i, j)]), solver.Value(self.variables[(i, j)])))
+
                     print(i,
                           j,
                           [solver.value(self.point_condition[(i, j)].condition[el]) for el in

@@ -5,6 +5,11 @@ import sys
 
 from copy import deepcopy
 
+from solver.solverui import SolverUi
+
+game = SolverUi()
+game.run()
+
 n, m = map(int, input().split())
 
 matrix = []
