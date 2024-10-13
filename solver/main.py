@@ -1,9 +1,9 @@
 import solve_in_average as solver
 import fast_solve as fast_solver
 from ortools.sat.python import cp_model
+import sys
 
 from copy import deepcopy
-
 
 n, m = map(int, input().split())
 
