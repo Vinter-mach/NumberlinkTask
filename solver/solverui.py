@@ -12,15 +12,24 @@ os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "hide"
 SQUARE_SIZE, MARGIN = 40, 2
 font = pygame.font.SysFont('Arial', 18)
 pygbutton.PYGBUTTON_FONT = font
-BG_COLOR = (200, 100, 220)
+BG_COLOR = (200, 100, 100)
 
 
 class SolverUi:
 
     def __init__(self):
+        self.DONE = False
+        self.ADDING_COLORS = True
+        self.CUR_LOC = None
+        self.COLOR_POSITIONS = []
+        self.PRINTED = False
+        self.SOLVE_ATTEMPTED = False
+        self.SOLVE_FAILED = False
+
         self.WIDTH = InputValidator.verified_pos_int("Введите ширину ", False)
         self.HEIGHT = InputValidator.verified_pos_int("Введите высоту ", False)
         self.COUNT = InputValidator.verified_pos_int("Введите количество различных цветов ", True)
+
         while self.COUNT > (self.WIDTH * self.HEIGHT) // 2:
             print("Цветов не может быть бльше чем половина клеток")
             self.COUNT = InputValidator.verified_pos_int("Введите количество различных цветов ", True)
@@ -32,17 +41,9 @@ class SolverUi:
         self.S_WIDTH, self.S_HEIGHT \
             = (self.WIDTH + 2) * SQUARE_SIZE + (self.WIDTH + 1) * MARGIN, (self.HEIGHT + 3) * SQUARE_SIZE + (
                 self.HEIGHT + 1) * MARGIN
+
         self.screen = pygame.display.set_mode([self.S_WIDTH, self.S_HEIGHT])
         self.clock = pygame.time.Clock()
-
-        # состояния
-        self.DONE = False  # закончилась ли программа
-        self.ADDING_COLORS = True  # активно ли состояние заполнения цветов
-        self.CUR_LOC = None  # текущая выбранная позиция
-        self.COLOR_POSITIONS = []  # позиции для каждого нажатия
-        self.PRINTED = False
-        self.SOLVE_ATTEMPTED = False
-        self.SOLVE_FAILED = False
 
         self.addButton = pygbutton.PygButton(
             ((SQUARE_SIZE + (self.WIDTH + 1) * (MARGIN + SQUARE_SIZE)) // 2 - SQUARE_SIZE,
@@ -67,8 +68,6 @@ class SolverUi:
     def add_new_number_location(self):
         if len(self.COLOR_POSITIONS) < 2 * self.COUNT and self.CUR_LOC and self.CUR_LOC not in self.COLOR_POSITIONS:
             self.COLOR_POSITIONS.append(self.CUR_LOC)
-            if len(self.COLOR_POSITIONS) % 2 == 0:
-                print(f"New number: {self.COLOR_POSITIONS[-1]}, {self.COLOR_POSITIONS[-2]}")
             self.PRINTED = False
             self.grid[self.CUR_LOC[0]][self.CUR_LOC[1]].color = (len(self.COLOR_POSITIONS) + 1) // 2
         self.CUR_LOC = None
@@ -84,25 +83,12 @@ class SolverUi:
         fastSolver = FastSolver(solver_matrix, self.HEIGHT, self.WIDTH, self.COUNT)
         res = fastSolver.try_solve()
 
-        # отладочный вывод
-        # for i in range(self.HEIGHT):
-        #     for j in range(self.WIDTH):
-        #         print(res[i][j].state, end = ' ')
-        #     print()
-
         if not res:
             return False
 
         for i in range(self.HEIGHT):
             for j in range(self.WIDTH):
                 self.grid[j][i] = res[i][j]
-
-        # отладочный вывод
-        # for i in range(len(self.grid)):
-        #     for j in range(len(self.grid[0])):
-        #         print(self.grid[i][j].state, end = ' ')
-        #     print()
-
 
         return True
 
@@ -120,22 +106,22 @@ class SolverUi:
                     self.DONE = True
                 elif event.type == pygame.MOUSEBUTTONDOWN:
                     pos = pygame.mouse.get_pos()
-                    # локация клика
                     if self.ADDING_COLORS:
                         if (SQUARE_SIZE + MARGIN) < pos[0] < (self.WIDTH + 1) * SQUARE_SIZE + self.WIDTH * MARGIN and \
                                 ((SQUARE_SIZE + MARGIN) < pos[1] < (
                                         self.HEIGHT + 1) * SQUARE_SIZE + self.HEIGHT * MARGIN):
                             self.CUR_LOC = pos[0] // (SQUARE_SIZE + MARGIN) - 1, pos[1] // (SQUARE_SIZE + MARGIN) - 1
 
-                # ивенты кнопок
                 if 'click' in self.addButton.handleEvent(event):
                     if self.ADDING_COLORS:
                         self.add_new_number_location()
+
                 elif 'click' in self.solveButton.handleEvent(event):
                     self.CUR_LOC, self.PRINTED = None, False
                     self.SOLVE_FAILED = not self.solve()
                     self.SOLVE_ATTEMPTED = True
                     self.solveButton.visible = False
+
                 elif 'click' in self.jpgButton.handleEvent(event):
                     if not os.path.exists(os.path.join('Solutions')):
                         os.makedirs(os.path.join('Solutions'))
@@ -143,10 +129,9 @@ class SolverUi:
                     pygame.image.save(self.screen.subsurface(pygame.Rect(SQUARE_SIZE, SQUARE_SIZE,
                                                                          self.WIDTH * (SQUARE_SIZE + MARGIN) + MARGIN,
                                                                          self.HEIGHT * (
-                                                                                     SQUARE_SIZE + MARGIN) + MARGIN)),
+                                                                                 SQUARE_SIZE + MARGIN) + MARGIN)),
                                       fname)
 
-            # Если все цвета добавлены
             if self.ADDING_COLORS and len(self.COLOR_POSITIONS) == 2 * self.COUNT:
                 self.ADDING_COLORS = False
                 self.addButton.visible = False
@@ -154,8 +139,8 @@ class SolverUi:
 
             if not self.PRINTED and self.ADDING_COLORS:
                 print(
-                    f"Selecting cells for {len(self.COLOR_POSITIONS) // 2 + 1},"
-                    f" cell #{len(self.COLOR_POSITIONS) % 2 + 1}.")
+                    f"Выбор клетки {len(self.COLOR_POSITIONS) // 2 + 1},"
+                    f"Порядок выбранной клетки #{len(self.COLOR_POSITIONS) % 2 + 1}.")
                 self.PRINTED = True
 
             self.screen.fill(BG_COLOR)
@@ -163,13 +148,11 @@ class SolverUi:
                                                       self.WIDTH * SQUARE_SIZE + (self.WIDTH + 1) * MARGIN,
                                                       self.HEIGHT * SQUARE_SIZE + (self.HEIGHT + 1) * MARGIN])
 
-            # отрисовка поля
             for y in range(self.HEIGHT):
                 for x in range(self.WIDTH):
                     pygame.draw.rect(self.screen, (255, 255, 255),
                                      [(x + 1) * (SQUARE_SIZE + MARGIN), (y + 1) * (SQUARE_SIZE + MARGIN),
                                       SQUARE_SIZE, SQUARE_SIZE])
-                    # отрисовка стартовых цветов
                     if self.grid[x][y].color is not None:
                         text_surface = font.render(f"{self.grid[x][y].color}", True, (0, 0, 0))
                         text_size = font.size(f"{self.grid[x][y].color}")
@@ -179,7 +162,6 @@ class SolverUi:
 
             for y in range(self.HEIGHT):
                 for x in range(self.WIDTH):
-                    # рисуем решение
                     p1 = [(x + 1) * (MARGIN + SQUARE_SIZE) + SQUARE_SIZE // 2, (y + 1) *
                           (MARGIN + SQUARE_SIZE) + SQUARE_SIZE // 2]
 

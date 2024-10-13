@@ -144,10 +144,10 @@ class FastSolver:
 
     def check_for_origin_point(self, current_element, left_element, right_element, under_element, over_element):
         cur_i, cur_j = current_element.i, current_element.j
-        left_request = self.model.NewBoolVar(f"{cur_i},{cur_j} left request")
-        right_request = self.model.NewBoolVar(f"{cur_i},{cur_j} right request")
-        under_request = self.model.NewBoolVar(f"{cur_i},{cur_j} under request")
-        over_request = self.model.NewBoolVar(f"{cur_i},{cur_j} over request")
+        left_request = False if left_element is None else self.model.NewBoolVar(f"{cur_i},{cur_j} left request")
+        right_request = False if right_element is None else self.model.NewBoolVar(f"{cur_i},{cur_j} right request")
+        under_request = False if under_element is None else self.model.NewBoolVar(f"{cur_i},{cur_j} under request")
+        over_request = False if over_element is None else self.model.NewBoolVar(f"{cur_i},{cur_j} over request")
 
         self.origin_values[(cur_i, cur_j)] = {"left": left_request, "right": right_request, "under": under_request,
                                               "over": over_request}
