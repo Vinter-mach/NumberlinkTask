@@ -18,19 +18,17 @@ for i in range(n):
 
 sample_matrix = deepcopy(matrix)
 
-#solv = solver.Solver(matrix, n, m)
 second_solve = fast_solver.FastSolver(sample_matrix, n, m, max_value)
 
-#solv.get_answer()
-
 res = second_solve.try_solve()
-
-print("second solve:")
 
 if res is None:
     print("I can't solve it")
 else:
+    widths = [max(len(str(res[i][j])) for i in range(n)) for j in range(m)]
+    border = '+' + '+'.join('-' * (w + 2) for w in widths) + '+'
+    print(border)
     for i in range(n):
-        for j in range(m):
-            print(res[i][j], end=" ")
-        print()
+        row_str = '|' + '|'.join(f' {str(res[i][j][0]).rjust(widths[j])} ' for j in range(m)) + '|'
+        print(row_str)
+        print(border)

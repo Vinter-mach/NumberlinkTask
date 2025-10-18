@@ -246,15 +246,16 @@ class FastSolver:
                     # row.append(solver.value(self.variables[(i, j)]))
                     row.append([solver.value(self.variables[(i, j)]), solver.value(self.condition[(i, j)]),
                                 solver.value(self.numbers[(i, j)])])
-                    print(i,
-                          j,
-                          [solver.value(self.point_condition[(i, j)].condition[el]) for el in
-                           range(1, self.condition_count + 1)],
-                          [solver.value(self.point_condition[(i, j)].value[el]) for el in range(1, self.max_value + 1)],
-                          0 if self.matrix[i][j] == 0 else [
-                              (key, solver.value(self.origin_values[(i, j)][key])) for key in
-                              self.origin_values[(i, j)]],
-                          )
+                    #print(i,
+                    #      j,
+                    #      [solver.value(self.point_condition[(i, j)].condition[el]) for el in
+                    #       range(1, self.condition_count + 1)],
+                    #      [solver.value(self.point_condition[(i, j)].value[el]) for el in range(1, self.max_value + 1)],
+                    #      0 if self.matrix[i][j] == 0 else [
+                    #          (key, solver.value(self.origin_values[(i, j)][key])) for key in
+                    #          self.origin_values[(i, j)]],
+                    #
+                    #)
                 result.append(deepcopy(row))
             return result
 

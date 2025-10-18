@@ -140,13 +140,13 @@ class Solver:
     def get_answer(self):
         may_result = self.get_local_result(1)
         if not may_result:
-            print("Oh no, I can't to solve it")
+            #print("Oh no, I can't to solve it")
             return
 
-        for i in range(self.line_count):
-            for j in range(self.column_count):
-                print(self.matrix[i][j], end=" ")
-            print()
+        #for i in range(self.line_count):
+        #    for j in range(self.column_count):
+        #        print(self.matrix[i][j], end=" ")
+        #    print()
 
     def get_all_paths(self):
         visited = [[False] * self.column_count for _ in range(self.line_count)]
