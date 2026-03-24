@@ -159,6 +159,30 @@ class FastSolver:
         self.model.Add((left_request + right_request + under_request + over_request) == 1).OnlyEnforceIf(
             current_element.condition[7])
 
+    def check_connectivity(self):
+        for i in range(self.line_count):
+            for j in range(self.column_count):
+                for k in range(1, self.max_value + 1):
+                    neighbors = []
+                    for di, dj in self.delta:
+                        ni, nj = i + di, j + dj
+                        if self.is_in_matrix((ni, nj)):
+                            has_prev = self.model.NewBoolVar(f"prev {i} {j} {ni} {nj} {k}")
+                            self.model.Add(self.variables[(ni, nj)] == k).OnlyEnforceIf(has_prev)
+                            self.model.Add(self.numbers[(ni, nj)] == self.numbers[(i, j)] - 1).OnlyEnforceIf(has_prev)
+                            neighbors.append(has_prev)
+
+                    is_this_value = self.point_condition[(i, j)].value[k]
+                    not_first = self.model.NewBoolVar(f"not first {i} {j} {k}")
+                    self.model.Add(self.numbers[(i, j)] > 1).OnlyEnforceIf(not_first)
+                    self.model.Add(self.numbers[(i, j)] <= 1).OnlyEnforceIf(not_first.Not())
+
+                    if neighbors:
+                        active = self.model.NewBoolVar(f"active {i} {j} {k}")
+                        self.model.AddBoolAnd([is_this_value, not_first]).OnlyEnforceIf(active)
+                        self.model.AddBoolOr([is_this_value.Not(), not_first.Not()]).OnlyEnforceIf(active.Not())
+                        self.model.AddBoolOr(neighbors).OnlyEnforceIf(active)
+
     def check_for_point(self, current_element, left_element, right_element, under_element, over_element,
                         number_of_condition):
         element_conditions = {
@@ -204,6 +228,7 @@ class FastSolver:
                 self.check_numbers(current_element, left_element, right_element, under_element, over_element)
 
         self.check_number_in_origin_point()
+        self.check_connectivity()
 
     def generate_condition_for_point(self, i, j):
         if self.matrix[i][j] != 0:
@@ -246,7 +271,7 @@ class FastSolver:
                     # row.append(solver.value(self.variables[(i, j)]))
                     row.append([solver.value(self.variables[(i, j)]), solver.value(self.condition[(i, j)]),
                                 solver.value(self.numbers[(i, j)])])
-                    #print(i,
+                    # print(i,
                     #      j,
                     #      [solver.value(self.point_condition[(i, j)].condition[el]) for el in
                     #       range(1, self.condition_count + 1)],
@@ -255,7 +280,7 @@ class FastSolver:
                     #          (key, solver.value(self.origin_values[(i, j)][key])) for key in
                     #          self.origin_values[(i, j)]],
                     #
-                    #)
+                    # )
                 result.append(deepcopy(row))
             return result
 
